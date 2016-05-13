@@ -136,7 +136,7 @@ module.exports = function(router)
 
 
                 request.on('row', function(columns) {
-
+                    console.log("ROW");
                     columns.forEach(function(column) {
                         if (column.value === null) {
                             console.log('NULL');
