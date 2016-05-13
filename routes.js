@@ -2,6 +2,11 @@ var sqlAzure = require('msnodesqlv8');
 var sql = require('mssql');
 module.exports = function(router)
 {
+
+    router.get('/', function (req, res) {
+        res.status(200).send("WORKING");
+    });
+
     router.post('/api/Turn', function (req, res)
     {
         var Job =  "'" + req.body.Job + "'";
