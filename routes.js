@@ -1,4 +1,3 @@
-var sqlAzure = require('msnodesqlv8');
 var sql = require('mssql');
 module.exports = function(router)
 {
@@ -22,60 +21,63 @@ module.exports = function(router)
             req.body.Move + ', ' +
             Action + ')';
 
-        //Azure
-        var connectionString = 'Driver={SQL Server Native Client 11.0};Server=tcp:prco304-server.database.windows.net,1433;Database=PRCO304DB;Uid=danbendell@prco304-server;Pwd=HVB37mdh;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;';
 
-        //Live Azure
-        sqlAzure.open(connectionString, function(err, conn) {
-            if(err) {
-                console.log(err);
-            }
-            console.log("HERE");
-            conn.query(sqlQuery, function(err, record) {
-                if(err) {
-                    res.status(0).send("SELECT * FROM User - Failed");
-                    console.log(err);
-                }
-                console.log(record);
-                res.status(200).send(record);
+        var Connection = require('tedious').Connection;
+        var config = {
+            userName: 'danbendell',
+            password: 'HVB37mdh',
+            server: 'prco304-server.database.windows.net',
+            // If you are on Microsoft Azure, you need this:
+            options: {encrypt: true, database: 'PRCO304DB'}
+        };
+        var connection = new Connection(config);
+        connection.on('connect', function(err) {
+            // If no error, then good to proceed.
+            console.log("Connected");
+
+            var Request = require('tedious').Request;
+            var TYPES = require('tedious').TYPES;
+
+            var request = new Request("INSERT INTO Turns ([SurroundingAllyCount],[SurroundingOppositionCount],[TotalAllyCount],[TotalOppositionCount],[Job],[HealthPercent],[ManaPercent],[Move],[Action]) VALUES (@SurroundingAllyCount, @SurroundingOppositionCount, @TotalAllyCount, @TotalOppositionCount, @Job, @HealthPercent, @ManaPercent, @Move, @Action);", function(err) {
+                if (err) {
+                    console.log(err);}
             });
+            request.addParameter('SurroundingAllyCount', TYPES.Int, req.body.SurroundingAllyCount);
+            request.addParameter('SurroundingOppositionCount', TYPES.Int , req.body.SurroundingOppositionCount);
+            request.addParameter('TotalAllyCount', TYPES.Int, req.body.TotalAllyCount);
+            request.addParameter('TotalOppositionCount', TYPES.Int, req.body.TotalOppositionCount);
+            request.addParameter('Job', TYPES.VarChar, req.body.Job);
+            request.addParameter('HealthPercent', TYPES.Decimal, req.body.HealthPercent);
+            request.addParameter('ManaPercent', TYPES.Decimal, req.body.ManaPercent);
+            request.addParameter('Move', TYPES.Bit, req.body.Move);
+            request.addParameter('Action', TYPES.VarChar, req.body.Action);
+
+            request.addOutputParameter('ID', TYPES.Int);
+
+            request.on('row', function(columns) {
+                console.log("ROWWW");
+                columns.forEach(function(column) {
+                    if (column.value === null) {
+                        console.log('NULL');
+                    } else {
+                        console.log("Product id of inserted item is " + column.value);
+                    }
+                });
+            });
+
+            request.on('returnValue', function(parameterName, value, metadata) {
+                console.log(parameterName + ' = ' + value);      // number = 42
+                res.status(200).send("DONE");                                              // string = qaz
+
+            });
+
+            request.on('done', function(rowCount, more, rows) {
+               console.log("DONE");
+            });
+            connection.execSql(request);
+
         });
 
-        //Local
-        //var config = {
-        //    user: 'dan',
-        //    password: 'password',
-        //    server: 'localhost', // You can use 'localhost\\instance' to connect to named instance
-        //    database: 'PRCO304-FinalAdventure',
-        //    port: 1433,
-        //
-        //    options: {
-        //        encrypt: true // Use this if you're on Windows Azure
-        //    }
-        //};
-        //console.log(sqlQuery);
-        //sql.connect(config).then(function() {
-        //
-        //    var connection = new sql.Connection(config, function(err) {
-        //        if(err) {
-        //            console.log("ERROR: " + err);
-        //        }
-        //        // Query
-        //        var request = new sql.Request(connection);
-        //        request.query(sqlQuery, function(err) {
-        //            //... error checks
-        //            if(err) {
-        //                console.log(err);
-        //            } else{
-        //                res.status(200).send();
-        //            }
-        //        });
-        //    });
-        //}).catch(function(err) {
-        //    if(err) {
-        //        console.log("CONNECTION ERROR: " + err);
-        //    }
-        //});
     });
 
     router.get('/api/Turn', function (req, res)
@@ -92,7 +94,7 @@ module.exports = function(router)
                         ',[ManaPercent] ' +
                         ',[Move] ' +
                         ',[Action] ' +
-        'FROM [PRCO304-FinalAdventure].[dbo].[Turns] ' +
+        'FROM Turns ' +
         'WHERE [SurroundingAllyCount] = ' + req.headers.surroundingallycount +
         ' AND [SurroundingOppositionCount] = ' + req.headers.surroundingoppositioncount +
         ' AND [TotalAllyCount] = ' + req.headers.totalallycount +
@@ -101,74 +103,60 @@ module.exports = function(router)
         ' AND [HealthPercent] = ' + req.headers.healthpercent +
         ' AND [ManaPercent] = ' +  req.headers.manapercent;
 
+
+        var Connection = require('tedious').Connection;
         var config = {
-            user: 'dan',
-            password: 'password',
-            server: 'localhost', // You can use 'localhost\\instance' to connect to named instance
-            database: 'PRCO304-FinalAdventure',
-            port: 1433,
-
-            options: {
-                encrypt: true // Use this if you're on Windows Azure
-            }
+            userName: 'danbendell',
+            password: 'HVB37mdh',
+            server: 'prco304-server.database.windows.net',
+            // If you are on Microsoft Azure, you need this:
+            options: {encrypt: true, database: 'PRCO304DB'}
         };
+        var connection = new Connection(config);
+        connection.on('connect', function(err) {
+            // If no error, then good to proceed.
+            console.log("Connected");
 
-        //var config = {
-        //    user: 'danbendell',
-        //    password: 'HVB37mdh',
-        //    server: 'prco304-server.database.windows.net', // You can use 'localhost\\instance' to connect to named instance
-        //    database: 'PRCO304DB',
-        //
-        //    options: {
-        //        encrypt: true // Use this if you're on Windows Azure
-        //    }
-        //};
-        var connectionString = 'Driver={SQL Server Native Client 11.0};Server=tcp:prco304-server.database.windows.net,1433;Database=PRCO304DB;Uid=danbendell@prco304-server;Pwd=HVB37mdh;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;';
+            var Request = require('tedious').Request;
+            var TYPES = require('tedious').TYPES;
 
-        //Live Azure
-        sqlAzure.open(connectionString, function(err, conn) {
-           if(err) {
-               console.log(err);
-           }
-            console.log("HERE");
-            conn.query("SELECT * FROM Turns", function(err, record) {
-                if(err) {
-                    res.status(0).send("SELECT * FROM User - Failed");
+            var jsonArray = [];
+            var rowObject ={};
+
+            var request = new Request(sqlQuery, function(err, value, rows) {
+                if (err) {
                     console.log(err);
+                } else {
+                    console.log("value " + value);
+                    console.log(rows);
+                    res.status(200).send(jsonArray);
                 }
-                console.log(record);
-                res.status(200).send(record);
+            });
+                var result = "";
+
+
+                request.on('row', function(columns) {
+
+                    columns.forEach(function(column) {
+                        if (column.value === null) {
+                            console.log('NULL');
+                        } else {
+                            rowObject[column.metadata.colName] = column.value;
+                            result+= column.value + " ";
+                        }
+                    });
+                    jsonArray.push(rowObject);
+                    console.log(result);
+                    result ="";
+                });
+
+                request.on('done', function(rowCount, more) {
+                    //res.status(200).send("DONE");
+                    console.log(rowCount + ' rows returned');
+                });
+                connection.execSql(request);
             });
         });
-
-        //Local DB
-        //sql.connect(config).then(function() {
-        //
-        //    var connection = new sql.Connection(config, function(err) {
-        //        if(err) {
-        //            console.log("ERROR: " + err);
-        //        }
-        //        // Query
-        //        var request = new sql.Request(connection);
-        //        console.log(sqlQuery);
-        //        request.query(sqlQuery, function(err, recordset) {
-        //            //... error checks
-        //            if(err) {
-        //                console.log(err);
-        //            }
-        //            //console.dir(recordset);
-        //            res.status(200).send(recordset);
-        //
-        //        });
-        //    });
-        //}).catch(function(err) {
-        //    if(err) {
-        //        console.log("CONNECTION ERROR: " + err);
-        //    }
-        //});
-
-
-    });
 
 
 };
