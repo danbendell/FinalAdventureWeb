@@ -82,7 +82,6 @@ module.exports = function(router)
 
     router.get('/api/Turn', function (req, res)
     {
-        console.log(req.headers);
         var Job =  "'" + req.headers.job + "'";
 
         var sqlQuery =  'SELECT [SurroundingAllyCount] ' +
@@ -115,6 +114,7 @@ module.exports = function(router)
         var connection = new Connection(config);
         connection.on('connect', function(err) {
             // If no error, then good to proceed.
+            if (err) return console.error(err); // <- 
             console.log("Connected");
 
             var Request = require('tedious').Request;
